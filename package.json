@@ -4,12 +4,12 @@
   "version": "1.0.0",
   "description": "AirDrop-style file sharing between Windows, iPhone and Mac over your local Wi-Fi.",
   "author": "Stéfano Girardelli",
-  "homepage": "https://github.com/Kromaverso/kromadrop#readme",
+  "homepage": "https://github.com/Kromaverso/k-drop#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Kromaverso/kromadrop.git"
+    "url": "git+https://github.com/Kromaverso/k-drop.git"
   },
-  "bugs": "https://github.com/Kromaverso/kromadrop/issues",
+  "bugs": "https://github.com/Kromaverso/k-drop/issues",
   "keywords": ["airdrop", "file-sharing", "electron", "windows", "iphone", "local-network", "qr-code"],
   "main": "src/main.js",
   "private": true,

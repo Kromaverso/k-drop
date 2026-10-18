@@ -146,8 +146,8 @@ The single biggest win is plugging the PC into the router with a cable.
 You need [Node.js](https://nodejs.org/) 20 or newer on Windows 10 or 11.
 
 ```bash
-git clone https://github.com/Kromaverso/kromadrop.git
-cd kromadrop
+git clone https://github.com/Kromaverso/k-drop.git
+cd k-drop
 npm install
 npm start          # run the app
 npm run dist       # build a Windows installer into dist/
