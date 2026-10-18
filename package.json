@@ -1,6 +1,6 @@
 {
-  "name": "kromadrop",
-  "productName": "KromaDrop",
+  "name": "kdrop",
+  "productName": "kDrop",
   "version": "1.0.0",
   "description": "AirDrop-style file sharing between Windows, iPhone and Mac over your local Wi-Fi.",
   "author": "Stéfano Girardelli",
@@ -26,8 +26,8 @@
     "electron-builder": "^26.0.12"
   },
   "build": {
-    "appId": "com.kromaverso.kromadrop",
-    "productName": "KromaDrop",
+    "appId": "com.kromaverso.kdrop",
+    "productName": "kDrop",
     "files": ["src/**/*", "assets/**/*", "package.json"],
     "win": { "target": "nsis", "icon": "assets/icon.png" },
     "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true }

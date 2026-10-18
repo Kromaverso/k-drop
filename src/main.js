@@ -9,7 +9,7 @@ const { Store } = require('./store');
 const { DropServer, localAddresses } = require('./server');
 const i18n = require('./i18n');
 
-app.setAppUserModelId('com.kromaverso.kromadrop');
+app.setAppUserModelId('com.kromaverso.kdrop');
 // Modo de captura de telas (desenvolvimento): perfil isolado, salva PNGs e fecha.
 const CAPTURE_DIR = process.env.KD_CAPTURE;
 if (CAPTURE_DIR) app.setPath('userData', path.join(CAPTURE_DIR, 'profile'));
@@ -97,7 +97,7 @@ function createWindow() {
     minWidth: 820,
     minHeight: 560,
     show: false,
-    title: 'KromaDrop',
+    title: 'kDrop',
     icon: path.join(ASSETS, 'icon.png'),
     titleBarStyle: 'hidden',
     backgroundMaterial: 'acrylic',
@@ -138,7 +138,7 @@ function updateTray() {
   if (!tray) return;
   const a = localAddresses()[0];
   const status = server.server && a ? t('tray.ready', { address: `${a.address}:${server.port}` }) : t('tray.stopped');
-  tray.setToolTip(`KromaDrop — ${status}`);
+  tray.setToolTip(`kDrop — ${status}`);
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: status, enabled: false },
     { type: 'separator' },
@@ -278,15 +278,29 @@ const handlers = {
 };
 for (const [ch, fn] of Object.entries(handlers)) ipcMain.handle(ch, (_e, ...args) => fn(...args));
 
+// O app se chamava KromaDrop: traz configurações, histórico e código de acesso da pasta antiga.
+function migrateFromKromaDrop() {
+  const oldFile = path.join(app.getPath('appData'), 'KromaDrop', 'kromadrop.json');
+  const newFile = path.join(app.getPath('userData'), 'kdrop.json');
+  if (CAPTURE_DIR || fs.existsSync(newFile) || !fs.existsSync(oldFile)) return;
+  try {
+    fs.mkdirSync(path.dirname(newFile), { recursive: true });
+    fs.copyFileSync(oldFile, newFile);
+  } catch (err) {
+    console.error('Migração do KromaDrop falhou:', err);
+  }
+}
+
 // ---------- App ----------
 app.on('second-instance', () => showWindow());
 
 app.whenReady().then(async () => {
+  migrateFromKromaDrop();
   store = new Store(app.getPath('userData'));
   if (process.env.KD_LANG) store.data.settings.language = process.env.KD_LANG; // capturas por idioma
   applyLanguage();
   server = new DropServer(store);
-  server.logFile = path.join(app.getPath('userData'), 'kromadrop.log');
+  server.logFile = path.join(app.getPath('userData'), 'kdrop.log');
   wireServer();
   nativeTheme.themeSource = 'system';
 

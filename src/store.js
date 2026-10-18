@@ -15,10 +15,10 @@ function newToken() {
 
 class Store {
   constructor(dir) {
-    this.file = path.join(dir, 'kromadrop.json');
+    this.file = path.join(dir, 'kdrop.json');
     const defaults = {
       settings: {
-        saveDir: path.join(os.homedir(), 'Downloads', 'KromaDrop'),
+        saveDir: path.join(os.homedir(), 'Downloads', 'kDrop'),
         organizeByDate: false,
         port: 8765,
         token: newToken(),

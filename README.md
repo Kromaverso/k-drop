@@ -1,8 +1,8 @@
 <p align="center">
-  <img alt="KromaDrop" src="assets/icon.png" width="112">
+  <img alt="kDrop" src="assets/icon.png" width="112">
 </p>
 
-<h1 align="center">KromaDrop</h1>
+<h1 align="center">kDrop</h1>
 
 <p align="center">
   <b>AirDrop-style file sharing for Windows: send to and from iPhone, Mac and any computer on your Wi-Fi.</b><br>
@@ -29,7 +29,7 @@
 </p>
 
 <p align="center">
-  <img alt="KromaDrop on Windows: recent transfers with a file arriving from an iPhone" src="docs/images/recent.png" width="860">
+  <img alt="kDrop on Windows: recent transfers with a file arriving from an iPhone" src="docs/images/recent.png" width="860">
   <br>
   <sub>Recents: everything that came in and went out, grouped by day, with live progress and speed.</sub>
 </p>
@@ -74,7 +74,7 @@ To add a language, copy [`src/locales/en.json`](src/locales/en.json) to `src/loc
       <h3>Send from the PC</h3>
       Drag files anywhere onto the window, or press <b>Ctrl+O</b>. They appear instantly under <b>From the PC</b> on every connected phone or computer, with no refresh needed. On the iPhone, <b>Download</b> saves to Files → Downloads.
       <br><br>
-      Shared files stay available until you remove them. KromaDrop serves them straight from where they are on disk, without copying them.
+      Shared files stay available until you remove them. kDrop serves them straight from where they are on disk, without copying them.
     </td>
     <td width="50%" valign="top">
       <img alt="iPhone page with uploads and files from the PC" src="docs/images/phone.png" width="300">
@@ -121,21 +121,21 @@ To add a language, copy [`src/locales/en.json`](src/locales/en.json) to `src/loc
 ## How it works
 
 ```
- iPhone / Mac / other PC                         Windows PC running KromaDrop
+ iPhone / Mac / other PC                         Windows PC running kDrop
  ┌────────────────────┐   same Wi-Fi / router   ┌──────────────────────────────┐
  │  Safari / browser  │ ──── HTTP upload ─────▶ │  local server (port 8765)    │──▶ your folder
- │  KromaDrop page    │ ◀─── HTTP download ──── │  shared files list           │◀── drag & drop
+ │  kDrop page    │ ◀─── HTTP download ──── │  shared files list           │◀── drag & drop
  │                    │ ◀─── live updates ───── │  (Server-Sent Events)        │
  └────────────────────┘                         └──────────────────────────────┘
 ```
 
-KromaDrop runs a small web server on your PC that only your local network can reach. The phone or computer opens its page, and files stream straight between the two devices, with nothing in the middle.
+kDrop runs a small web server on your PC that only your local network can reach. The phone or computer opens its page, and files stream straight between the two devices, with nothing in the middle.
 
-**Why doesn't the PC show up in the iPhone's AirDrop list?** AirDrop runs on AWDL, a private Apple Wi-Fi protocol that standard Windows Wi-Fi drivers can't speak. KromaDrop gets you the same result over your normal network, and the share sheet shortcut puts **Send to PC** right next to AirDrop.
+**Why doesn't the PC show up in the iPhone's AirDrop list?** AirDrop runs on AWDL, a private Apple Wi-Fi protocol that standard Windows Wi-Fi drivers can't speak. kDrop gets you the same result over your normal network, and the share sheet shortcut puts **Send to PC** right next to AirDrop.
 
 ## How fast is it?
 
-Files go device → router → PC, so speed depends on your network, not on KromaDrop.
+Files go device → router → PC, so speed depends on your network, not on kDrop.
 
 | Network | Typical speed | 1 GB video |
 |---|---|---|
@@ -160,7 +160,7 @@ npm run dist       # build a Windows installer into dist/
 
 The first time it runs:
 
-1. **Windows Firewall** asks about KromaDrop. Allow it on **Private networks**.
+1. **Windows Firewall** asks about kDrop. Allow it on **Private networks**.
 2. Make sure your Wi-Fi is set to **Private** in *Settings → Network & internet → Wi-Fi*. On a Public network, Windows blocks incoming connections.
 3. Open **Conectar** (Connect) and scan the QR code with the iPhone camera.
 
@@ -188,14 +188,14 @@ The QR code updates when the PC's IP changes, but the shortcut keeps the old add
 | Slow transfers | Use 5 GHz instead of 2.4 GHz, move closer to the router, or connect the PC by cable. Turn off VPNs. |
 | Port already in use | Pick another port under **Ajustes → Porta**. |
 
-Transfers are logged to `%APPDATA%\KromaDrop\kromadrop.log`. Include that file when you open an issue.
+Transfers are logged to `%APPDATA%\kDrop\kdrop.log`. Include that file when you open an issue.
 
 ## Under the hood
 
 - **Electron app** with a frameless window, custom traffic-light controls and the Windows 11 acrylic backdrop. It lives in the tray and can start with Windows.
 - **Plain Node HTTP server** with no web framework. Uploads stream straight to disk with no size limit, downloads support HTTP Range so they can resume, and the shared list reaches every device live over Server-Sent Events.
 - **One self-contained page** for phones and other computers (HTML, CSS and JS in one file), installable to the Home Screen.
-- **No database**: settings, history and the shared list live in one JSON file in `%APPDATA%\KromaDrop`.
+- **No database**: settings, history and the shared list live in one JSON file in `%APPDATA%\kDrop`.
 
 | Endpoint | What it does |
 |---|---|
@@ -226,13 +226,13 @@ To refresh the screenshots with sample data in an isolated profile, run `npx ele
 
 ## Security
 
-- Only devices on your local network can reach KromaDrop, and every request needs the access code.
+- Only devices on your local network can reach kDrop, and every request needs the access code.
 - The code is 8 random characters. Generating a new one in Settings disconnects every device right away.
 - Uploaded file names are cleaned up, so files can't escape the folder you chose or overwrite each other.
-- Traffic is plain HTTP inside your network. Use KromaDrop on networks you trust, not on public Wi-Fi.
+- Traffic is plain HTTP inside your network. Use kDrop on networks you trust, not on public Wi-Fi.
 
 ---
 
 <p align="center">
-  <sub>Made by <a href="https://github.com/Kromaverso">Kromaverso</a>. AirDrop is a trademark of Apple Inc. KromaDrop is not affiliated with or endorsed by Apple.</sub>
+  <sub>Made by <a href="https://github.com/Kromaverso">Kromaverso</a>. AirDrop is a trademark of Apple Inc. kDrop is not affiliated with or endorsed by Apple.</sub>
 </p>

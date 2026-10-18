@@ -1,4 +1,4 @@
-# KromaDrop
+# kDrop
 
 <sub>[English](README.md) · **Português**</sub>
 
@@ -6,7 +6,7 @@ Compartilhamento de arquivos no estilo AirDrop entre Windows, iPhone, Mac e
 qualquer computador da mesma rede. O outro aparelho não precisa instalar nada:
 é só escanear um QR code ou abrir um link. Nada passa pela internet.
 
-![KromaDrop no Windows](docs/images/recent.png)
+![kDrop no Windows](docs/images/recent.png)
 
 ## Rodar
 
@@ -39,13 +39,13 @@ O app fala 14 idiomas e segue o idioma do Windows (ou o que você escolher em *A
 - **Mac ou outro computador na mesma rede (Windows, Linux):** abra o endereço
   mostrado em *Conectar* em qualquer navegador e digite o código de acesso na
   primeira vez. Para mandar a este PC, arraste arquivos para a página; para
-  receber, arraste na janela do KromaDrop e clique em *Baixar* no outro computador.
+  receber, arraste na janela do kDrop e clique em *Baixar* no outro computador.
 
 ## Estrutura
 
 - `src/main.js`: janela (acrílico do Windows 11), bandeja, notificações, IPC
 - `src/server.js`: servidor HTTP (upload em stream, download com Range, eventos SSE)
-- `src/store.js`: configurações, histórico e lista de envio (JSON em `%APPDATA%\KromaDrop`)
+- `src/store.js`: configurações, histórico e lista de envio (JSON em `%APPDATA%\kDrop`)
 - `src/renderer/`: interface do PC
 - `src/mobile/index.html`: página do iPhone/Mac
 - `tools/make-icon.js`: gera os ícones; `tools/capture.js`: capturas de tela

@@ -10,7 +10,9 @@ async function captureViews({ win, store, server, transfers, pushState, outDir }
   const samples = path.join(outDir, 'samples');
   fs.mkdirSync(samples, { recursive: true });
   store.data.settings.deviceName = 'Studio-PC';
-  store.data.settings.saveDir = path.join(outDir, 'received');
+  // Caminho de exemplo só para as capturas do PC (nada é salvo nelas); a página do
+  // celular, que envia arquivos de verdade, usa a pasta temporária logo abaixo.
+  store.data.settings.saveDir = 'C:\\Users\\Studio\\Downloads\\kDrop';
   const mk = (name, kb) => {
     const p = path.join(samples, name);
     fs.writeFileSync(p, Buffer.alloc(kb * 1024));
@@ -43,6 +45,7 @@ async function captureViews({ win, store, server, transfers, pushState, outDir }
   }
 
   // Página do iPhone
+  store.data.settings.saveDir = path.join(outDir, 'received');
   const phone = new BrowserWindow({ width: 390, height: 844, show: true, frame: false, backgroundColor: '#0b0b12' });
   await phone.loadURL(`http://127.0.0.1:${server.port}/?t=${store.settings.token}`);
   await wait(1200);

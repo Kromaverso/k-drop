@@ -1,6 +1,6 @@
 {
-  "name": "KromaDrop",
-  "short_name": "KromaDrop",
+  "name": "kDrop",
+  "short_name": "kDrop",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0b0b12",

@@ -99,7 +99,7 @@ class DropServer extends EventEmitter {
     return this.start();
   }
 
-  // Registro simples para diagnosticar transferências (kromadrop.log na pasta de dados).
+  // Registro simples para diagnosticar transferências (kdrop.log na pasta de dados).
   log(line) {
     if (!this.logFile) return;
     fs.appendFile(this.logFile, `${new Date().toISOString()} ${line}\n`, () => {});
@@ -200,7 +200,7 @@ class DropServer extends EventEmitter {
     const total = Number(req.headers['content-length']) || 0;
     const device = deviceFromUA(req.headers['user-agent']);
     const id = crypto.randomUUID();
-    const partial = path.join(dir, `.${id}.kromadrop-part`);
+    const partial = path.join(dir, `.${id}.kdrop-part`);
     const out = fs.createWriteStream(partial);
     let received = 0;
     let lastEmit = 0;
