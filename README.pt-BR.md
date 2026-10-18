@@ -24,6 +24,10 @@ npm run dist
 Na primeira vez, o Windows pergunta sobre o firewall: permita em **Redes privadas**.
 A rede Wi-Fi precisa estar como **Privada** (Configurações → Rede e Internet).
 
+## Idiomas
+
+O app fala 14 idiomas e segue o idioma do Windows (ou o que você escolher em *Ajustes → Idioma*). A página do iPhone segue o idioma do celular. Para adicionar um idioma, copie `src/locales/en.json` para `src/locales/<código>.json` e traduza.
+
 ## Como usar
 
 - **iPhone → PC:** aponte a câmera para o QR code em *Conectar*, toque em

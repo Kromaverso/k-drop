@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -78,6 +78,7 @@
     .pick .ic { width: 64px; height: 64px; border-radius: 18px; margin: 0 auto 14px; display: grid; place-items: center; color: #fff; background: linear-gradient(145deg, #5ed6ff, #0a5cff); box-shadow: 0 10px 26px rgba(10, 132, 255, .45); transition: transform .15s; }
     .pick:active .ic { transform: scale(.94); }
     .pick { transition: background .15s, box-shadow .15s; }
+    [dir="rtl"] .row + .row::before { left: 0; right: 66px; }
     .pick.over { background: var(--accent-soft); box-shadow: 0 0 0 2px var(--accent) inset; }
     @media (hover: hover) and (pointer: fine) { body { max-width: 560px; margin: 0 auto; } }
     .pick .ic svg { width: 30px; height: 30px; stroke-width: 2.1; }
@@ -123,33 +124,33 @@
     <img src="/icon.png" alt="" />
     <div>
       <h1>KromaDrop</h1>
-      <p><span class="dot" id="dot"></span><span id="conn">Conectando…</span></p>
+      <p><span class="dot" id="dot"></span><span id="conn"></span></p>
     </div>
   </header>
 
   <div class="card auth hidden card-in" id="auth">
-    <h2>Digite o código de acesso</h2>
-    <p>Ele aparece no PC, em <b>Conectar</b>. Ou escaneie o QR code de lá com a câmera.</p>
+    <h2 data-i18n="mobile.codeTitle"></h2>
+    <p data-i18n="mobile.codeBody"></p>
     <form id="auth-form">
-      <input id="code" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="••••••••" />
-      <button type="submit">Conectar</button>
+      <input id="code" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="••••••••" dir="ltr" />
+      <button type="submit" data-i18n="mobile.connect"></button>
     </form>
   </div>
 
   <div id="app" class="hidden">
-    <div class="section-title">Enviar para o PC</div>
+    <div class="section-title" data-i18n="mobile.sendTitle"></div>
     <label class="card pick card-in">
       <input type="file" id="file" multiple />
       <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 15.5V4M7.5 8.5 12 4l4.5 4.5"/><path d="M5 13.5v4A2.5 2.5 0 0 0 7.5 20h9a2.5 2.5 0 0 0 2.5-2.5v-4"/></svg></div>
-      <strong>Escolher fotos ou arquivos</strong>
-      <span id="pick-sub">Vão direto para a pasta do PC</span>
+      <strong id="pick-title"></strong>
+      <span id="pick-sub"></span>
     </label>
     <div class="card hidden" id="uploads"></div>
 
-    <div class="section-title"><span>Do PC</span><span id="count"></span></div>
-    <div class="card card-in" id="outbox"><div class="empty">Nada por aqui ainda.<br>Arraste arquivos para a janela do KromaDrop no PC.</div></div>
+    <div class="section-title"><span data-i18n="mobile.fromPc"></span><span id="count"></span></div>
+    <div class="card card-in" id="outbox"></div>
 
-    <footer>Tudo acontece pela sua rede Wi-Fi local.<br>Dica: Compartilhar → Adicionar à Tela de Início.</footer>
+    <footer data-i18n="mobile.footer"></footer>
   </div>
 
   <script>
@@ -158,7 +159,48 @@
     const KINDS = { image: /^(jpe?g|png|heic|heif|gif|webp|dng|tiff?)$/, video: /^(mov|mp4|m4v|mkv|webm|avi)$/, audio: /^(mp3|m4a|wav|aac|flac)$/, pdf: /^pdf$/, doc: /^(docx?|txt|rtf|pages|md|key|pptx?|xlsx?|csv|numbers)$/, archive: /^(zip|rar|7z|tar|gz|dmg)$/ };
     const kind = (n) => { const e = (n.split('.').pop() || '').toLowerCase(); for (const k in KINDS) if (KINDS[k].test(e)) return [k, e]; return ['', e.slice(0, 4)]; };
     const tile = (n) => { const [k, e] = kind(n); return `<div class="tile ${k}">${esc(e)}</div>`; };
-    const size = (n) => { const u = ['B', 'KB', 'MB', 'GB']; let i = 0; while (n >= 1024 && i < 3) { n /= 1024; i++; } return `${n.toFixed(i && n < 100 ? 1 : 0).replace('.', ',')} ${u[i]}`; };
+
+    // ---------- Idioma: segue o idioma do aparelho ----------
+    let lang = 'en';
+    let dict = {};
+    let en = {};
+    let plural = new Intl.PluralRules('en');
+    const lookup = (key, vars) => {
+      let v = dict[key] ?? en[key] ?? key;
+      if (v && typeof v === 'object' && !Array.isArray(v)) v = v[plural.select(Number(vars.n) || 0)] ?? v.other;
+      return String(v);
+    };
+    const t = (key, vars = {}) => lookup(key, vars).replace(/\{(\w+)\}/g, (m, k) => (k in vars ? esc(vars[k]) : m));
+    const tx = (key, vars = {}) => lookup(key, vars).replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : m)).replace(/<br\s*\/?>/g, ' ').replace(/<[^>]+>/g, '');
+    const num = (n, d) => new Intl.NumberFormat(lang, { maximumFractionDigits: d }).format(n);
+    const size = (n) => { const u = dict.units || ['B', 'KB', 'MB', 'GB', 'TB']; let i = 0; while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; } return `⁦${num(n, i && n < 100 ? 1 : 0)} ${u[i]}⁩`; };
+
+    function pickLang(avail) {
+      const lower = avail.map((c) => c.toLowerCase());
+      for (const p of navigator.languages || [navigator.language]) {
+        const want = String(p).toLowerCase();
+        if (lower.includes(want)) return avail[lower.indexOf(want)];
+        const base = want.split('-')[0];
+        const i = lower.findIndex((c) => c === base || c.startsWith(base + '-'));
+        if (i >= 0) return avail[i];
+      }
+      return 'en';
+    }
+
+    async function loadLang() {
+      try {
+        const avail = await (await fetch('/locales.json')).json();
+        lang = pickLang(avail);
+        en = await (await fetch('/locales/en.json')).json();
+        dict = lang === 'en' ? en : await (await fetch(`/locales/${lang}.json`)).json();
+      } catch {}
+      plural = new Intl.PluralRules(lang);
+      document.documentElement.lang = lang;
+      document.documentElement.dir = dict._dir || 'ltr';
+      document.querySelectorAll('[data-i18n]').forEach((el) => { el.innerHTML = t(el.dataset.i18n); });
+      $('#pick-title').textContent = tx(desktop ? 'mobile.pickDesktop' : 'mobile.pick');
+      setConn(tx('mobile.connecting'));
+    }
 
     // Código de acesso: vem no QR (?t=...) e fica salvo neste aparelho.
     const params = new URLSearchParams(location.search);
@@ -167,14 +209,15 @@
 
     let es = null;
     let pcName = 'PC';
+    const desktop = matchMedia('(hover: hover) and (pointer: fine)').matches;
 
     function setConn(text, cls) { $('#conn').textContent = text; $('#dot').className = 'dot ' + (cls || ''); }
 
-    function askCode(msg) {
+    function askCode(msgKey) {
       if (es) { es.close(); es = null; }
       $('#app').classList.add('hidden');
       $('#auth').classList.remove('hidden');
-      setConn(msg || 'Precisa do código de acesso', 'err');
+      setConn(tx(msgKey || 'mobile.needCode'), 'err');
       setTimeout(() => $('#code').focus(), 50);
     }
 
@@ -182,17 +225,17 @@
       if (!token) return askCode();
       try {
         const r = await fetch('/api/info', { headers: { 'X-Token': token } });
-        if (r.status === 401) { localStorage.removeItem('kd-token'); return askCode('Código inválido ou trocado'); }
+        if (r.status === 401) { localStorage.removeItem('kd-token'); return askCode('mobile.invalidCode'); }
         const info = await r.json();
         pcName = info.name;
         $('#auth').classList.add('hidden');
         $('#app').classList.remove('hidden');
-        $('#pick-sub').textContent = `Vão direto para a pasta do ${pcName}`;
-        setConn(`Conectado a ${pcName}`, 'ok');
+        $('#pick-sub').textContent = tx('mobile.pickSub', { name: pcName });
+        setConn(tx('mobile.connected', { name: pcName }), 'ok');
         renderOutbox(info.outbox);
         listen();
       } catch {
-        setConn('PC fora do ar — tentando de novo…', 'err');
+        setConn(tx('mobile.offline'), 'err');
         setTimeout(connect, 3000);
       }
     }
@@ -200,24 +243,24 @@
     function listen() {
       if (es) es.close();
       es = new EventSource(`/api/events?t=${encodeURIComponent(token)}`);
-      es.addEventListener('outbox', (e) => { renderOutbox(JSON.parse(e.data)); setConn(`Conectado a ${pcName}`, 'ok'); });
+      es.addEventListener('outbox', (e) => { renderOutbox(JSON.parse(e.data)); setConn(tx('mobile.connected', { name: pcName }), 'ok'); });
       es.onerror = () => {
-        setConn('Reconectando…', 'err');
+        setConn(tx('mobile.reconnecting'), 'err');
         es.close(); es = null;
         setTimeout(connect, 2500);
       };
     }
 
     function renderOutbox(list) {
-      $('#count').textContent = list.length ? list.length : '';
+      $('#count').textContent = list.length ? num(list.length, 0) : '';
       $('#outbox').innerHTML = list.length
         ? list.map((o) => `
           <div class="row">
             ${tile(o.name)}
             <div class="main"><div class="name">${esc(o.name)}</div><div class="meta">${size(o.size)}</div></div>
-            <a class="dl" href="/api/outbox/${o.id}?t=${encodeURIComponent(token)}" download="${esc(o.name)}"><svg viewBox="0 0 24 24"><path d="M12 5v12M7 12l5 5 5-5"/></svg>Baixar</a>
+            <a class="dl" href="/api/outbox/${o.id}?t=${encodeURIComponent(token)}" download="${esc(o.name)}"><svg viewBox="0 0 24 24"><path d="M12 5v12M7 12l5 5 5-5"/></svg>${t('mobile.download')}</a>
           </div>`).join('')
-        : `<div class="empty">Nada por aqui ainda.<br>Arraste arquivos para a janela do KromaDrop no ${esc(pcName)}.</div>`;
+        : `<div class="empty">${t('mobile.empty', { name: pcName })}</div>`;
     }
 
     // ---------- Envio ----------
@@ -231,9 +274,7 @@
     });
 
     // Em computador (mouse), dá para arrastar arquivos para a página.
-    const desktop = matchMedia('(hover: hover) and (pointer: fine)').matches;
     if (desktop) {
-      document.querySelector('.pick strong').textContent = 'Arraste arquivos ou clique aqui';
       let depth = 0;
       const pick = document.querySelector('.pick');
       addEventListener('dragenter', (e) => { e.preventDefault(); if (++depth === 1) pick.classList.add('over'); });
@@ -252,7 +293,7 @@
       for (const f of files) {
         const row = document.createElement('div');
         row.className = 'row';
-        row.innerHTML = `${tile(f.name)}<div class="main"><div class="name">${esc(f.name)}</div><div class="meta">Na fila · ${size(f.size)}</div><div class="bar"><i style="width:0"></i></div></div>`;
+        row.innerHTML = `${tile(f.name)}<div class="main"><div class="name">${esc(f.name)}</div><div class="meta">${t('mobile.queued', { size: size(f.size) })}</div><div class="bar"><i style="width:0"></i></div></div>`;
         $('#uploads').prepend(row);
         queue.push({ f, row });
       }
@@ -276,24 +317,24 @@
         const pct = (e.loaded / e.total) * 100;
         const speed = e.loaded / Math.max(0.2, (Date.now() - started) / 1000);
         bar.style.width = pct + '%';
-        meta.textContent = `${Math.round(pct)}% · ${size(e.loaded)} de ${size(e.total)} · ${size(speed)}/s`;
+        meta.textContent = tx('mobile.progress', { pct: num(Math.round(pct), 0), done: size(e.loaded), total: size(e.total), speed: size(speed) });
       };
       xhr.onload = () => {
         if (xhr.status === 200) {
           const secs = Math.max(0.1, (Date.now() - started) / 1000);
           bar.style.width = '100%';
           meta.className = 'meta ok';
-          meta.textContent = `✓ Enviado · ${size(f.size)} em ${secs < 10 ? secs.toFixed(1).replace('.', ',') : Math.round(secs)} s`;
+          meta.textContent = tx('mobile.sent', { size: size(f.size), secs: num(secs, secs < 10 ? 1 : 0) });
           setTimeout(() => row.querySelector('.bar')?.remove(), 600);
         } else if (xhr.status === 401) {
-          askCode('Código de acesso trocado no PC');
+          askCode('mobile.codeChanged');
         } else {
           meta.className = 'meta err';
-          meta.textContent = 'Falhou — toque em escolher para tentar de novo';
+          meta.textContent = tx('mobile.failed');
         }
         done();
       };
-      xhr.onerror = () => { meta.className = 'meta err'; meta.textContent = 'Sem conexão com o PC'; done(); };
+      xhr.onerror = () => { meta.className = 'meta err'; meta.textContent = tx('mobile.noConnection'); done(); };
       xhr.send(f);
       function done() { busy = false; pump(); }
     }
@@ -309,7 +350,7 @@
       if (document.visibilityState === 'visible' && !es && token) connect();
     });
 
-    connect();
+    loadLang().then(connect);
   </script>
 </body>
 </html>

@@ -7,6 +7,7 @@ const fs = require('fs');
 const QRCode = require('qrcode');
 const { Store } = require('./store');
 const { DropServer, localAddresses } = require('./server');
+const i18n = require('./i18n');
 
 app.setAppUserModelId('com.kromaverso.kromadrop');
 // Modo de captura de telas (desenvolvimento): perfil isolado, salva PNGs e fecha.
@@ -22,6 +23,20 @@ let server = null;
 let serverError = null;
 let quitting = false;
 const transfers = new Map();
+let lang = 'en';
+let t = i18n.createT('en');
+
+// Idioma da interface: escolhido em Ajustes ou, no automático, o do Windows.
+function systemLang() {
+  const prefs = app.getPreferredSystemLanguages?.() || [];
+  return i18n.match([...prefs, app.getLocale()]);
+}
+function applyLanguage() {
+  const pref = store.settings.language;
+  lang = pref && pref !== 'auto' && i18n.available().includes(pref) ? pref : systemLang();
+  t = i18n.createT(lang);
+}
+const deviceLabel = (d) => (!d || d === 'Device' || d === 'Dispositivo' ? t('device.unknown') : d);
 
 function send(channel, payload) {
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
@@ -45,8 +60,16 @@ async function buildState() {
     addresses,
     qrs,
     transfers: [...transfers.values()],
-    server: { running: !!server.server, port: server.port, error: serverError },
+    server: { running: !!server.server, port: server.port, error: serverError && (serverError.key ? t(serverError.key, serverError.vars) : serverError.raw) },
     version: app.getVersion(),
+    i18n: {
+      lang,
+      dir: i18n.load(lang)?._dir || 'ltr',
+      dict: i18n.load(lang),
+      en: i18n.load('en'),
+      languages: i18n.languages(),
+      systemName: i18n.load(systemLang())?._name,
+    },
   };
 }
 
@@ -60,8 +83,8 @@ async function startServer() {
     serverError = null;
   } catch (err) {
     serverError = err.code === 'EADDRINUSE'
-      ? `A porta ${store.settings.port} já está em uso. Escolha outra em Ajustes.`
-      : err.message;
+      ? { key: 'server.portInUse', vars: { port: store.settings.port } }
+      : { raw: err.message };
   }
   updateTray();
   pushState();
@@ -114,17 +137,17 @@ function showWindow(view) {
 function updateTray() {
   if (!tray) return;
   const a = localAddresses()[0];
-  const status = server.server && a ? `Pronto em ${a.address}:${server.port}` : 'Servidor parado';
+  const status = server.server && a ? t('tray.ready', { address: `${a.address}:${server.port}` }) : t('tray.stopped');
   tray.setToolTip(`KromaDrop — ${status}`);
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: status, enabled: false },
     { type: 'separator' },
-    { label: 'Abrir KromaDrop', click: () => showWindow() },
-    { label: 'Compartilhar arquivos…', click: () => pickOutbox() },
-    { label: 'Mostrar QR code', click: () => showWindow('connect') },
-    { label: 'Abrir pasta de recebidos', click: () => openSaveDir() },
+    { label: t('tray.open'), click: () => showWindow() },
+    { label: t('tray.share'), click: () => pickOutbox() },
+    { label: t('tray.qr'), click: () => showWindow('connect') },
+    { label: t('tray.folder'), click: () => openSaveDir() },
     { type: 'separator' },
-    { label: 'Sair', click: () => { quitting = true; app.quit(); } },
+    { label: t('tray.quit'), click: () => { quitting = true; app.quit(); } },
   ]));
 }
 
@@ -135,7 +158,7 @@ function openSaveDir() {
 
 async function pickOutbox() {
   const r = await dialog.showOpenDialog(win, {
-    title: 'Escolha arquivos para enviar ao iPhone',
+    title: t('dialog.pickOutbox'),
     properties: ['openFile', 'multiSelections'],
   });
   if (!r.canceled) addOutbox(r.filePaths);
@@ -167,10 +190,10 @@ function applyLoginItem() {
 }
 
 function fmtSize(n) {
-  const u = ['B', 'KB', 'MB', 'GB'];
+  const u = i18n.load(lang)?.units || ['B', 'KB', 'MB', 'GB', 'TB'];
   let i = 0;
   while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
-  return `${n.toFixed(i ? 1 : 0).replace('.', ',')} ${u[i]}`;
+  return `⁦${new Intl.NumberFormat(lang, { maximumFractionDigits: i && n < 100 ? 1 : 0 }).format(n)} ${u[i]}⁩`;
 }
 
 function wireServer() {
@@ -197,7 +220,7 @@ function wireServer() {
   });
   server.on('received', (entry) => {
     pushState();
-    notify(`Recebido do ${entry.device}`, `${entry.name} · ${fmtSize(entry.size)}`, () => shell.showItemInFolder(entry.path));
+    notify(t('notify.received', { device: deviceLabel(entry.device) }),`${entry.name} · ${fmtSize(entry.size)}`, () => shell.showItemInFolder(entry.path));
     if (store.settings.openFolderOnReceive) shell.showItemInFolder(entry.path);
   });
   server.on('sent', () => pushState());
@@ -209,17 +232,19 @@ const handlers = {
   'set-setting': async (key, value) => {
     if (key === 'port') {
       value = Math.round(Number(value));
-      if (!(value >= 1024 && value <= 65535)) throw new Error('Porta inválida (1024–65535).');
+      if (!(value >= 1024 && value <= 65535)) throw new Error(t('server.invalidPort'));
     }
     if (key === 'deviceName') value = String(value).trim().slice(0, 40) || require('os').hostname();
+    if (key === 'language' && value !== 'auto' && !i18n.available().includes(value)) value = 'auto';
     store.setSetting(key, value);
+    if (key === 'language') { applyLanguage(); updateTray(); }
     if (key === 'port') await startServer();
     if (key === 'launchAtLogin') applyLoginItem();
     await pushState();
   },
   'choose-save-dir': async () => {
     const r = await dialog.showOpenDialog(win, {
-      title: 'Onde salvar os arquivos recebidos?',
+      title: t('dialog.saveDir'),
       defaultPath: store.settings.saveDir,
       properties: ['openDirectory', 'createDirectory'],
     });
@@ -258,6 +283,8 @@ app.on('second-instance', () => showWindow());
 
 app.whenReady().then(async () => {
   store = new Store(app.getPath('userData'));
+  if (process.env.KD_LANG) store.data.settings.language = process.env.KD_LANG; // capturas por idioma
+  applyLanguage();
   server = new DropServer(store);
   server.logFile = path.join(app.getPath('userData'), 'kromadrop.log');
   wireServer();

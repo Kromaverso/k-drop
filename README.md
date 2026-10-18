@@ -55,8 +55,13 @@
   </tr>
 </table>
 
-> [!NOTE]
-> The app's interface is in Brazilian Portuguese for now. Translations are welcome.
+### 🌍 14 languages
+
+English, 简体中文, हिन्दी, Español, العربية (right-to-left), Français, Português (Brasil), Русский, Bahasa Indonesia, Deutsch, 日本語, 한국어, Italiano and Türkçe.
+
+The PC follows the Windows language, or the one you pick in Settings. The iPhone page follows the phone's language on its own. Dates, numbers and plurals use each language's own rules, and the Shortcut steps use the labels iOS shows in that language.
+
+To add a language, copy [`src/locales/en.json`](src/locales/en.json) to `src/locales/<code>.json` and translate the values. It appears in Settings automatically.
 
 ## Features
 
@@ -208,6 +213,8 @@ src/
 ├── server.js          HTTP server: uploads, downloads, SSE
 ├── store.js           settings, history, shared list (JSON)
 ├── preload.js         safe bridge between the window and the app
+├── i18n.js            language matching, plurals, fallback to English
+├── locales/           one JSON dictionary per language
 ├── renderer/          the Windows interface
 └── mobile/            the page for iPhone, Mac and other PCs
 tools/

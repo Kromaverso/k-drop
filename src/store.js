@@ -23,6 +23,7 @@ class Store {
         port: 8765,
         token: newToken(),
         deviceName: os.hostname(),
+        language: 'auto',
         notifications: true,
         openFolderOnReceive: false,
         launchAtLogin: false,

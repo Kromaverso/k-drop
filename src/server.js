@@ -5,6 +5,7 @@ const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
 const { EventEmitter } = require('events');
+const i18n = require('./i18n');
 
 const MOBILE_DIR = path.join(__dirname, 'mobile');
 const ASSETS_DIR = path.join(__dirname, '..', 'assets');
@@ -39,7 +40,7 @@ function deviceFromUA(ua = '') {
   if (/Android/i.test(ua)) return 'Android';
   if (/Windows/i.test(ua)) return 'Windows';
   if (/Linux|CrOS/i.test(ua)) return 'Linux';
-  return 'Dispositivo';
+  return 'Device'; // traduzido na interface como "outro aparelho"
 }
 
 function sameToken(a, b) {
@@ -135,6 +136,18 @@ class DropServer extends EventEmitter {
       res.writeHead(200, { 'Content-Type': type, 'Cache-Control': 'no-cache' });
       fs.createReadStream(path.join(dir, file)).pipe(res);
       return;
+    }
+
+    // Traduções da página do celular (públicas, sem código de acesso).
+    if (req.method === 'GET' && route === '/locales.json') {
+      return this.json(res, 200, i18n.available());
+    }
+    const loc = route.match(/^\/locales\/([A-Za-z]{2,3}(?:-[A-Za-z]{2,4})?)\.json$/);
+    if (req.method === 'GET' && loc) {
+      const dict = i18n.load(loc[1]);
+      if (!dict) return this.json(res, 404, { error: 'Not found' });
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-cache' });
+      return res.end(JSON.stringify(dict));
     }
 
     if (!route.startsWith('/api/')) return this.json(res, 404, { error: 'Não encontrado' });
