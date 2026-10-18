@@ -1,0 +1,35 @@
+{
+  "name": "kromadrop",
+  "productName": "KromaDrop",
+  "version": "1.0.0",
+  "description": "AirDrop-style file sharing between Windows, iPhone and Mac over your local Wi-Fi.",
+  "author": "Stéfano Girardelli",
+  "homepage": "https://github.com/Kromaverso/kromadrop#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kromaverso/kromadrop.git"
+  },
+  "bugs": "https://github.com/Kromaverso/kromadrop/issues",
+  "keywords": ["airdrop", "file-sharing", "electron", "windows", "iphone", "local-network", "qr-code"],
+  "main": "src/main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "icon": "node tools/make-icon.js",
+    "dist": "electron-builder --win"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "electron": "^38.2.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.kromaverso.kromadrop",
+    "productName": "KromaDrop",
+    "files": ["src/**/*", "assets/**/*", "package.json"],
+    "win": { "target": "nsis", "icon": "assets/icon.png" },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true }
+  }
+}
