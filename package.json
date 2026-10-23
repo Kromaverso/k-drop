@@ -15,7 +15,7 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "icon": "node tools/make-icon.js",
+    "icon": "electron tools/make-icon.js",
     "dist": "electron-builder --win"
   },
   "dependencies": {

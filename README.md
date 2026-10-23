@@ -218,7 +218,7 @@ src/
 ├── renderer/          the Windows interface
 └── mobile/            the page for iPhone, Mac and other PCs
 tools/
-├── make-icon.js       draws the app and tray icons (no dependencies)
+├── make-icon.js       exports the app and tray icons from assets/icon-source.png
 └── capture.js         renders the screenshots in this README
 ```
 

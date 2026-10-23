@@ -48,7 +48,7 @@ O app fala 14 idiomas e segue o idioma do Windows (ou o que você escolher em *A
 - `src/store.js`: configurações, histórico e lista de envio (JSON em `%APPDATA%\kDrop`)
 - `src/renderer/`: interface do PC
 - `src/mobile/index.html`: página do iPhone/Mac
-- `tools/make-icon.js`: gera os ícones; `tools/capture.js`: capturas de tela
+- `tools/make-icon.js`: exporta os ícones a partir de `assets/icon-source.png`; `tools/capture.js`: capturas de tela
   (`KD_CAPTURE=<pasta> npx electron .`)
 
 ## Segurança
