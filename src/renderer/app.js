@@ -119,6 +119,7 @@ const I = {
   plug: '<svg viewBox="0 0 24 24"><path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0zM12 17v4"/></svg>',
   alert: '<svg viewBox="0 0 24 24"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg>',
   bolt: '<svg viewBox="0 0 24 24"><path d="M13 3 5 13.5h6L10 21l8-10.5h-6z"/></svg>',
+  clipboard: '<svg viewBox="0 0 24 24"><rect x="5" y="4.5" width="14" height="16" rx="2.5"/><path d="M9 4.5V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v.5a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1zM9 11h6M9 15h4"/></svg>',
   globe: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.4 3.5 5.2 3.5 8.5s-1.1 6.1-3.5 8.5c-2.4-2.4-3.5-5.2-3.5-8.5s1.1-6.1 3.5-8.5z"/></svg>',
 };
 
@@ -317,6 +318,22 @@ function viewSend() {
           </div>
         </div>`).join('')}</div>`
     : '';
+  const c = state.clip;
+  const clip = c
+    ? `<div class="group-title"><span>${t('send.clipTitle')}</span></div>
+       <div class="card file-list">
+        <div class="file-row">
+          ${c.kind === 'image' ? `<img class="tile clip-thumb" src="${c.thumb}" alt="" />` : `<div class="tile t-code">${I.clipboard}</div>`}
+          <div class="file-main">
+            <div class="file-name">${c.kind === 'image' ? t('clip.image') : esc(c.text.replace(/\s+/g, ' '))}</div>
+            <div class="file-meta"><span>${clipMeta(c)}</span><span>·</span><span>${t('send.added', { when: fmtWhen(c.at) })}</span></div>
+          </div>
+          <div class="file-actions">
+            <button data-act="clip-stop" title="${esc(tx('action.stopSharing'))}">${I.x}</button>
+          </div>
+        </div>
+       </div>`
+    : '';
   return `
     <div class="send-grid">
       <div>
@@ -325,6 +342,7 @@ function viewSend() {
           <strong>${t('send.dropTitle')}</strong>
           <span>${t('send.dropSub')}</span>
         </div>
+        ${clip}
         ${list}
       </div>
       <div class="card mini-qr">
@@ -334,6 +352,40 @@ function viewSend() {
       </div>
     </div>`;
 }
+
+function clipMeta(c) {
+  return c.kind === 'image'
+    ? t('clip.imageMeta', { size: `⁦${c.width}×${c.height}⁩` })
+    : t('clip.textMeta', { n: c.length, count: new Intl.NumberFormat(L.lang).format(c.length) });
+}
+
+// ---------- Cartão "compartilhar a área de transferência?" (canto da janela) ----------
+function renderClipOffer(o) {
+  const el = $('#clip-offer');
+  if (!o) {
+    if (el.classList.contains('show')) { el.classList.remove('show'); el.classList.add('hide'); }
+    return;
+  }
+  el.innerHTML = `
+    <div class="clip-head">
+      <div class="s-icon ic-teal">${I.clipboard}</div>
+      <div class="clip-title"><b>${t('clip.title')}</b><small>${clipMeta(o)}</small></div>
+      <button class="clip-x" data-clip="dismiss" title="${esc(tx('clip.dismiss'))}">${I.x}</button>
+    </div>
+    <div class="clip-preview">${o.kind === 'image' ? `<img src="${o.thumb}" alt="" />` : `<pre>${esc(o.text)}</pre>`}</div>
+    <div class="clip-actions">
+      <button class="btn" data-clip="dismiss">${t('clip.dismiss')}</button>
+      <button class="btn primary" data-clip="share">${I.share}${t('clip.share')}</button>
+    </div>`;
+  el.classList.remove('hide');
+  el.classList.add('show');
+}
+$('#clip-offer').onclick = (e) => {
+  const b = e.target.closest('[data-clip]');
+  if (!b) return;
+  if (b.dataset.clip === 'share') act(drop.clipShare, tx('toast.clipShared'));
+  else act(drop.clipDismiss);
+};
 
 function shortcutUrl(a) {
   return `http://${a.address}:${state.settings.port}/api/upload?t=${state.settings.token}&name=`;
@@ -436,6 +488,7 @@ function viewSettings() {
         ${setting({ icon: I.bell, color: 'ic-red', title: t('settings.notifications'), sub: tx('settings.notificationsSub'), control: toggle('notifications') })}
         ${setting({ icon: I.power, color: 'ic-green', title: t('settings.launch'), sub: tx('settings.launchSub'), control: toggle('launchAtLogin') })}
         ${setting({ icon: I.tray, color: 'ic-indigo', title: t('settings.tray'), sub: tx('settings.traySub'), control: toggle('closeToTray') })}
+        ${setting({ icon: I.clipboard, color: 'ic-teal', title: t('settings.clipboard'), sub: tx('settings.clipboardSub'), control: toggle('clipboardPrompt') })}
       </div>
 
       <div class="group-title">${t('settings.network')}</div>
@@ -462,6 +515,7 @@ function bindView() {
       case 'folder': return act(() => drop.showInFolder(tg.dataset.path));
       case 'rm-hist': return act(() => drop.removeHistory(tg.dataset.id));
       case 'rm-out': return act(() => drop.removeOutbox(tg.dataset.id));
+      case 'clip-stop': return act(drop.clipStop);
       case 'dz': return act(drop.pickOutbox);
       case 'clear-hist': return act(drop.clearHistory, tx('toast.historyCleared'));
       case 'choose-dir': return act(async () => { const d = await drop.chooseSaveDir(); if (d) toast(tx('toast.folderUpdated')); });
@@ -533,7 +587,7 @@ drop.on('state', (s) => {
   transfers = s.transfers;
   const langChanged = applyI18n(s.i18n);
   renderChrome();
-  if (langChanged) return navigate(view);
+  if (langChanged) { renderClipOffer(s.clipOffer); return navigate(view); }
   if (outboxChanged && view === 'send') renderToolbar();
   render();
 });
@@ -542,6 +596,7 @@ drop.on('transfers', (list) => {
   if (view === 'recent') renderTransfers();
 });
 drop.on('navigate', (v) => navigate(v));
+drop.on('clip-offer', (o) => { if (state) state.clipOffer = o; renderClipOffer(o); });
 
 (async () => {
   state = await drop.getState();
@@ -549,6 +604,7 @@ drop.on('navigate', (v) => navigate(v));
   applyI18n(state.i18n);
   renderChrome();
   navigate('recent');
+  renderClipOffer(state.clipOffer);
   // Atualiza "há X min" periodicamente.
   setInterval(() => { if (view === 'recent' && !transfers.length) render(); }, 60_000);
 })();

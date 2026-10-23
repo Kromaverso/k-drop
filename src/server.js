@@ -61,6 +61,7 @@ class DropServer extends EventEmitter {
     this.server = null;
     this.clients = new Set(); // conexões SSE
     this.port = null;
+    this.clip = null; // área de transferência compartilhada (só em memória)
   }
 
   start() {
@@ -127,6 +128,19 @@ class DropServer extends EventEmitter {
     for (const c of this.clients) c.write(msg);
   }
 
+  // clip: { kind: 'text', text } ou { kind: 'image', png, width, height }; null para de compartilhar.
+  setClip(clip) {
+    this.clip = clip && { ...clip, id: crypto.randomUUID().slice(0, 8), at: Date.now() };
+    const msg = `event: clipboard\ndata: ${JSON.stringify(this.clipPublic())}\n\n`;
+    for (const c of this.clients) c.write(msg);
+  }
+
+  clipPublic() {
+    if (!this.clip) return null;
+    const { id, kind, text, width, height, at } = this.clip;
+    return kind === 'text' ? { id, kind, text, at } : { id, kind, width, height, at };
+  }
+
   async handle(req, res) {
     const url = new URL(req.url, 'http://local');
     const route = url.pathname;
@@ -154,7 +168,7 @@ class DropServer extends EventEmitter {
     if (!this.authorized(req, url)) return this.json(res, 401, { error: 'Código de acesso inválido' });
 
     if (req.method === 'GET' && route === '/api/info') {
-      return this.json(res, 200, { name: this.store.settings.deviceName, outbox: this.outboxPublic() });
+      return this.json(res, 200, { name: this.store.settings.deviceName, outbox: this.outboxPublic(), clipboard: this.clipPublic() });
     }
 
     if (req.method === 'GET' && route === '/api/events') {
@@ -164,6 +178,7 @@ class DropServer extends EventEmitter {
         Connection: 'keep-alive',
       });
       res.write(`event: outbox\ndata: ${JSON.stringify(this.outboxPublic())}\n\n`);
+      res.write(`event: clipboard\ndata: ${JSON.stringify(this.clipPublic())}\n\n`);
       const ping = setInterval(() => res.write(': ping\n\n'), 20_000);
       this.clients.add(res);
       req.on('close', () => {
@@ -175,6 +190,18 @@ class DropServer extends EventEmitter {
 
     if ((req.method === 'POST' || req.method === 'PUT') && route === '/api/upload') {
       return this.receive(req, res, url);
+    }
+
+    const clip = route.match(/^\/api\/clipboard\/([a-f0-9-]+)\.png$/);
+    if (req.method === 'GET' && clip) {
+      if (this.clip?.kind !== 'image' || this.clip.id !== clip[1]) return this.json(res, 404, { error: 'Não encontrado' });
+      res.writeHead(200, {
+        'Content-Type': 'image/png',
+        'Content-Length': this.clip.png.length,
+        'Content-Disposition': contentDisposition(`kDrop ${new Date(this.clip.at).toLocaleString('sv-SE').replace(/:/g, '.')}.png`),
+        'Cache-Control': 'no-store',
+      });
+      return res.end(this.clip.png);
     }
 
     const m = route.match(/^\/api\/outbox\/([a-f0-9]+)$/);

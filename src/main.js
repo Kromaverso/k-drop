@@ -60,6 +60,8 @@ async function buildState() {
     addresses,
     qrs,
     transfers: [...transfers.values()],
+    clip: clipState(),
+    clipOffer: offerPublic(clipOffer),
     server: { running: !!server.server, port: server.port, error: serverError && (serverError.key ? t(serverError.key, serverError.vars) : serverError.raw) },
     version: app.getVersion(),
     i18n: {
@@ -226,6 +228,71 @@ function wireServer() {
   server.on('sent', () => pushState());
 }
 
+// ---------- Área de transferência ----------
+// Observa o que é copiado no PC e oferece, num cartão no canto da janela, mandar para o celular.
+const CLIP_TEXT_LIMIT = 200_000;
+let clipSig = null; // assinatura do que está na área de transferência agora
+let clipOffer = null; // conteúdo oferecido na janela
+let sharedSig = null; // o que já está compartilhado (não oferece de novo)
+let sharedThumb = null;
+let selfCopy = null; // texto que o próprio kDrop copiou (código, endereço)
+
+const sha1 = (data) => require('crypto').createHash('sha1').update(data).digest('hex');
+
+function readClipboard() {
+  if (clipboard.availableFormats().some((f) => f.startsWith('image/'))) {
+    const img = clipboard.readImage();
+    if (!img.isEmpty()) {
+      const { width, height } = img.getSize();
+      // Miniatura de 16×16 como impressão digital: barata e muda quando a imagem muda.
+      const sig = `img:${width}x${height}:${sha1(img.resize({ width: 16, height: 16 }).toBitmap())}`;
+      return { sig, kind: 'image', img, width, height };
+    }
+  }
+  const text = clipboard.readText();
+  if (!text.trim() || text.length > CLIP_TEXT_LIMIT) return null;
+  return { sig: `txt:${sha1(text)}`, kind: 'text', text };
+}
+
+function offerPublic(c) {
+  if (!c) return null;
+  return c.kind === 'text'
+    ? { kind: 'text', text: c.text.slice(0, 800), length: c.text.length }
+    : { kind: 'image', width: c.width, height: c.height, thumb: c.img.resize({ width: Math.min(c.width, 560) }).toDataURL() };
+}
+
+function setClipOffer(c) {
+  clipOffer = c;
+  send('clip-offer', offerPublic(c));
+}
+
+function checkClipboard() {
+  if (!store.settings.clipboardPrompt) return;
+  let c;
+  try { c = readClipboard(); } catch { return; }
+  const sig = c?.sig || null;
+  if (sig === clipSig) return;
+  clipSig = sig;
+  if (!c || sig === sharedSig || (c.kind === 'text' && c.text === selfCopy)) return setClipOffer(null);
+  setClipOffer(c);
+}
+
+function shareClipOffer() {
+  const c = clipOffer;
+  if (!c) return;
+  server.setClip(c.kind === 'text' ? { kind: 'text', text: c.text } : { kind: 'image', png: c.img.toPNG(), width: c.width, height: c.height });
+  sharedSig = c.sig;
+  sharedThumb = c.kind === 'image' ? c.img.resize({ height: 76 }).toDataURL() : null;
+  setClipOffer(null);
+  return pushState();
+}
+
+function clipState() {
+  const p = server.clipPublic();
+  if (!p) return null;
+  return p.kind === 'text' ? { ...p, text: p.text.slice(0, 300), length: p.text.length } : { ...p, thumb: sharedThumb };
+}
+
 // ---------- IPC ----------
 const handlers = {
   'get-state': () => buildState(),
@@ -240,6 +307,7 @@ const handlers = {
     if (key === 'language') { applyLanguage(); updateTray(); }
     if (key === 'port') await startServer();
     if (key === 'launchAtLogin') applyLoginItem();
+    if (key === 'clipboardPrompt') { clipSig = null; setClipOffer(null); checkClipboard(); }
     await pushState();
   },
   'choose-save-dir': async () => {
@@ -270,7 +338,10 @@ const handlers = {
     for (const c of server.clients) c.end();
     return pushState();
   },
-  'copy': (text) => clipboard.writeText(String(text)),
+  'copy': (text) => { selfCopy = String(text); clipboard.writeText(selfCopy); },
+  'clip-share': () => shareClipOffer(),
+  'clip-dismiss': () => setClipOffer(null),
+  'clip-stop': () => { server.setClip(null); sharedSig = null; sharedThumb = null; return pushState(); },
   'win-minimize': () => win.minimize(),
   'win-maximize': () => (win.isMaximized() ? win.unmaximize() : win.maximize()),
   'win-close': () => win.close(),
@@ -316,6 +387,8 @@ app.whenReady().then(async () => {
       .then(() => { quitting = true; app.quit(); });
     return;
   }
+
+  setInterval(checkClipboard, 1200);
 
   // Redes mudam (troca de Wi-Fi, IP novo): atualiza endereços/QR.
   let lastAddrs = JSON.stringify(localAddresses());

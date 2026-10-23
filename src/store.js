@@ -28,6 +28,7 @@ class Store {
         openFolderOnReceive: false,
         launchAtLogin: false,
         closeToTray: true,
+        clipboardPrompt: true,
       },
       history: [],
       outbox: [],

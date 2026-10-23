@@ -111,6 +111,15 @@
     .auth input { width: 100%; height: 48px; border-radius: 13px; border: 1px solid var(--border); background: var(--card-2); color: var(--text); text-align: center; font-size: 22px; letter-spacing: .3em; font-weight: 600; text-transform: uppercase; outline: none; font-family: ui-monospace, "SF Mono", monospace; }
     .auth input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
     .auth button { margin-top: 12px; width: 100%; height: 48px; border-radius: 13px; border: 0; background: var(--accent); color: #fff; font-size: 16px; font-weight: 600; }
+    .clip { padding: 14px; }
+    .clip-text { max-height: 200px; overflow: auto; padding: 10px 12px; border-radius: 12px; background: var(--card-2); border: 1px solid var(--border); font-size: 15px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; -webkit-user-select: text; user-select: text; }
+    .clip-img { display: block; width: 100%; max-height: 320px; object-fit: contain; border-radius: 12px; background: var(--card-2); -webkit-touch-callout: default; }
+    .clip-bar { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+    .clip-bar .meta { flex: 1; margin: 0; }
+    .copy { flex: none; height: 38px; padding: 0 18px; border-radius: 19px; border: 0; background: var(--accent); color: #fff; font-size: 15px; font-weight: 600; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; transition: background .2s, transform .1s; }
+    .copy:active { transform: scale(.96); }
+    .copy.ok { background: var(--green); }
+    .copy svg { width: 16px; height: 16px; stroke-width: 2.2; }
     .hidden { display: none !important; }
     footer { text-align: center; color: var(--text-3); font-size: 12px; margin-top: 26px; line-height: 1.5; }
     .card-in { animation: rise .4s cubic-bezier(.2, .8, .2, 1) both; }
@@ -138,6 +147,11 @@
   </div>
 
   <div id="app" class="hidden">
+    <div id="clip-wrap" class="hidden">
+      <div class="section-title" data-i18n="mobile.clipTitle"></div>
+      <div class="card clip card-in" id="clip"></div>
+    </div>
+
     <div class="section-title" data-i18n="mobile.sendTitle"></div>
     <label class="card pick card-in">
       <input type="file" id="file" multiple />
@@ -233,6 +247,7 @@
         $('#pick-sub').textContent = tx('mobile.pickSub', { name: pcName });
         setConn(tx('mobile.connected', { name: pcName }), 'ok');
         renderOutbox(info.outbox);
+        renderClip(info.clipboard);
         listen();
       } catch {
         setConn(tx('mobile.offline'), 'err');
@@ -244,6 +259,7 @@
       if (es) es.close();
       es = new EventSource(`/api/events?t=${encodeURIComponent(token)}`);
       es.addEventListener('outbox', (e) => { renderOutbox(JSON.parse(e.data)); setConn(tx('mobile.connected', { name: pcName }), 'ok'); });
+      es.addEventListener('clipboard', (e) => renderClip(JSON.parse(e.data)));
       es.onerror = () => {
         setConn(tx('mobile.reconnecting'), 'err');
         es.close(); es = null;
@@ -261,6 +277,63 @@
             <a class="dl" href="/api/outbox/${o.id}?t=${encodeURIComponent(token)}" download="${esc(o.name)}"><svg viewBox="0 0 24 24"><path d="M12 5v12M7 12l5 5 5-5"/></svg>${t('mobile.download')}</a>
           </div>`).join('')
         : `<div class="empty">${t('mobile.empty', { name: pcName })}</div>`;
+    }
+
+    // ---------- Área de transferência do PC ----------
+    const COPY_ICON = '<svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>';
+    let clip = null;
+
+    function renderClip(c) {
+      if (c?.id && c.id === clip?.id) return;
+      clip = c;
+      $('#clip-wrap').classList.toggle('hidden', !c);
+      if (!c) return;
+      if (c.kind === 'text') {
+        const n = c.text.length;
+        $('#clip').innerHTML = `
+          <div class="clip-text" id="clip-text">${esc(c.text)}</div>
+          <div class="clip-bar"><div class="meta">${t('mobile.clipTextMeta', { n, count: num(n, 0) })}</div><button class="copy" id="copy">${COPY_ICON}<span>${t('mobile.copy')}</span></button></div>`;
+        $('#copy').onclick = copyClip;
+      } else {
+        const src = `/api/clipboard/${c.id}.png?t=${encodeURIComponent(token)}`;
+        $('#clip').innerHTML = `
+          <img class="clip-img" src="${src}" alt="" />
+          <div class="clip-bar"><div class="meta">${t('mobile.clipImageHint')}</div><a class="copy" href="${src}" download><svg viewBox="0 0 24 24"><path d="M12 5v12M7 12l5 5 5-5"/></svg><span>${t('mobile.save')}</span></a></div>`;
+      }
+    }
+
+    // Página servida por http na rede local: navigator.clipboard só existe em contexto
+    // seguro, então o caminho comum aqui é selecionar o texto e usar execCommand('copy').
+    async function copyText(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        try { await navigator.clipboard.writeText(text); return true; } catch {}
+      }
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;font-size:16px';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.setSelectionRange(0, text.length);
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch {}
+      ta.remove();
+      return ok;
+    }
+
+    async function copyClip() {
+      const btn = $('#copy');
+      if (await copyText(clip.text)) {
+        btn.classList.add('ok');
+        btn.querySelector('span').textContent = tx('mobile.copied');
+        setTimeout(() => { btn.classList.remove('ok'); btn.querySelector('span').textContent = tx('mobile.copy'); }, 1800);
+      } else {
+        // Sem permissão para copiar: deixa o texto selecionado para o usuário copiar.
+        const range = document.createRange();
+        range.selectNodeContents($('#clip-text'));
+        getSelection().removeAllRanges();
+        getSelection().addRange(range);
+        btn.closest('.clip').querySelector('.meta').textContent = tx('mobile.copyFailed');
+      }
     }
 
     // ---------- Envio ----------

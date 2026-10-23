@@ -18,6 +18,9 @@ contextBridge.exposeInMainWorld('drop', {
   regenerateToken: invoke('regenerate-token'),
   copy: invoke('copy'),
   restartServer: invoke('restart-server'),
+  clipShare: invoke('clip-share'),
+  clipDismiss: invoke('clip-dismiss'),
+  clipStop: invoke('clip-stop'),
   win: {
     minimize: invoke('win-minimize'),
     maximize: invoke('win-maximize'),
@@ -25,7 +28,7 @@ contextBridge.exposeInMainWorld('drop', {
   },
   pathForFile: (file) => webUtils.getPathForFile(file),
   on: (channel, cb) => {
-    const allowed = ['state', 'transfers', 'navigate', 'maximized'];
+    const allowed = ['state', 'transfers', 'navigate', 'maximized', 'clip-offer'];
     if (!allowed.includes(channel)) return;
     ipcRenderer.on(channel, (_e, payload) => cb(payload));
   },
